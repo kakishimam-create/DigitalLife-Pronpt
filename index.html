@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>未来のくらしプランナー ─ プロンプト作成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --ink: #241F1A;
+    --paper: #FAF6EF;
+    --panel: #FFFFFF;
+    --dusk: #1F2E45;
+    --lamp: #E39A56;
+    --line: #E4DCCB;
+    --muted: #7A7266;
+    --code-bg: #211C29;
+    --code-ink: #F1E9D8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #F2ECE0;
+      --paper: #17140F;
+      --panel: #221D16;
+      --line: #3A342A;
+      --muted: #A69C8B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #F2ECE0;
+    --paper: #17140F;
+    --panel: #221D16;
+    --line: #3A342A;
+    --muted: #A69C8B;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", sans-serif;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  .brandbar {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 18px clamp(16px, 4vw, 40px) 6px;
+  }
+  .brandbar .mark {
+    font-family: "Shippori Mincho", serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: .04em;
+  }
+  .brandbar .tag {
+    font-size: .78rem;
+    color: var(--muted);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) 1fr;
+    gap: clamp(16px, 3vw, 32px);
+    padding: 0 clamp(16px, 4vw, 40px) 48px;
+    max-width: 1320px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  h1 {
+    font-family: "Shippori Mincho", serif;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    line-height: 1.4;
+    margin: 6px 0 4px;
+    max-width: 22ch;
+  }
+  .lede {
+    color: var(--muted);
+    font-size: .92rem;
+    line-height: 1.8;
+    margin: 0 0 22px;
+    max-width: 48ch;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+  legend {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip { position: relative; }
+  .chip input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+  }
+  .chip span {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: .85rem;
+    color: var(--ink);
+    background: var(--panel);
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+    user-select: none;
+  }
+  .chip input:checked + span {
+    background: var(--lamp);
+    border-color: var(--lamp);
+    color: #241708;
+  }
+  .chip input:focus-visible + span {
+    outline: 2px solid var(--dusk);
+    outline-offset: 2px;
+  }
+  .chip:active span { transform: scale(.97); }
+
+  select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: .92rem;
+  }
+  textarea { resize: vertical; line-height: 1.6; }
+  select:focus-visible, textarea:focus-visible { outline: 2px solid var(--dusk); outline-offset: 1px; }
+
+  .go {
+    margin-top: 6px;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 12px;
+    background: var(--dusk);
+    color: #F4EFE4;
+    font-family: "Shippori Mincho", serif;
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: .03em;
+    cursor: pointer;
+    transition: filter .15s ease;
+  }
+  .go:hover { filter: brightness(1.12); }
+  .go:disabled { opacity: .6; cursor: progress; }
+  .go:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+  .note {
+    font-size: .74rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* --- output column --- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 24px;
+  }
+  .panel + .panel { margin-top: 16px; }
+  .panel .label {
+    font-size: .78rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .copy-btn {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: .76rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s ease;
+    white-space: nowrap;
+  }
+  .copy-btn:hover { background: var(--paper); }
+  .copy-btn:focus-visible { outline: 2px solid var(--dusk); outline-offset: 2px; }
+
+  .prompt-box {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 12px;
+    padding: 18px 20px;
+    font-size: .92rem;
+    line-height: 1.9;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 3em;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .prompt-box.ready { opacity: 1; transform: translateY(0); }
+
+  .neg-box {
+    font-size: .84rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .recs {
+    margin-top: 4px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .rec {
+    border-top: 2px solid var(--lamp);
+    padding: 14px 4px 4px;
+  }
+  .rec h3 { font-size: .95rem; margin: 0 0 6px; font-weight: 700; }
+  .rec p { font-size: .82rem; color: var(--muted); line-height: 1.7; margin: 0; }
+
+  .placeholder { color: var(--muted); }
+
+  .tools-note {
+    font-size: .76rem;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.7;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 12px);
+    background: var(--dusk);
+    color: #F4EFE4;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: .82rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 20;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+
+<div class="brandbar">
+  <span class="mark">PCデポ</span>
+  <span class="tag">デジタルライフプランナー ｜ 未来のくらしプランナー</span>
+</div>
+
+<div class="layout">
+  <div>
+    <h1>数年後のくらしを、<br>言葉のプロンプトで描く。</h1>
+    <p class="lede">ご家族のこと、趣味のこと、働き方、そして描いてほしい絵の雰囲気を選んでください。画像生成AIにそのまま貼り付けられるプロンプトを作成します。</p>
+
+    <form id="planForm">
+      <fieldset>
+        <legend>家族構成</legend>
+        <select id="familyType" name="familyType">
+          <option value="single">おひとり</option>
+          <option value="couple">ご夫婦・パートナー</option>
+          <option value="couple_kids" selected>ご夫婦＋お子さま</option>
+          <option value="multigen">二世帯・三世代</option>
+        </select>
+      </fieldset>
+
+      <fieldset id="kidsField">
+        <legend>お子さまの人数</legend>
+        <select id="kidsCount" name="kidsCount">
+          <option value="0">0人</option>
+          <option value="1">1人</option>
+          <option value="2" selected>2人</option>
+          <option value="3">3人以上</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>家族構成の詳細（任意）</legend>
+        <textarea id="familyDetail" name="familyDetail" rows="2" placeholder="例）小学生の娘と犬1匹／実家の母と同居予定／夫婦ふたりと猫2匹 など"></textarea>
+      </fieldset>
+
+      <fieldset>
+        <legend>趣味・好きなこと（複数選択可）</legend>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" name="hobby" value="photo"><span>写真・カメラ</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="game" checked><span>ゲーム</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="diy"><span>DIY・工作</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="cook"><span>料理</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="garden"><span>植物・庭</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="fitness"><span>運動・フィットネス</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="reading"><span>読書</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="music"><span>音楽・楽器</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="travel"><span>旅行</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="pet"><span>ペット</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="outdoor"><span>アウトドア・キャンプ</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="movie"><span>映画・動画鑑賞</span></label>
+          <label class="chip"><input type="checkbox" name="hobby" value="craft"><span>手芸・ハンドメイド</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>働き方・暮らし方</legend>
+        <select id="workStyle" name="workStyle">
+          <option value="remote" selected>在宅ワーク中心</option>
+          <option value="hybrid">在宅と出社のハイブリッド</option>
+          <option value="office">出社中心</option>
+          <option value="freelance">自営業・フリーランス</option>
+          <option value="shift">シフト制・不規則な勤務</option>
+          <option value="homemaker">子育て・家事中心の暮らし</option>
+          <option value="senior">シニアライフ（退職後の暮らし）</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>住環境</legend>
+        <select id="housing" name="housing">
+          <option value="mansion" selected>マンション</option>
+          <option value="house">戸建て</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>目標時期</legend>
+        <select id="years" name="years">
+          <option value="3">3年後</option>
+          <option value="5" selected>5年後</option>
+          <option value="10">10年後</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>予算感</legend>
+        <select id="budget" name="budget">
+          <option value="realistic" selected>現実的に、できる範囲で</option>
+          <option value="flexible">理想を優先して考えたい</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>画像のスタイル</legend>
+        <div class="chips" id="styleChips">
+          <label class="chip"><input type="radio" name="imgStyle" value="photo" checked><span>実写風（フォトリアル）</span></label>
+          <label class="chip"><input type="radio" name="imgStyle" value="illust"><span>やさしいイラスト風</span></label>
+          <label class="chip"><input type="radio" name="imgStyle" value="anime"><span>アニメ風</span></label>
+          <label class="chip"><input type="radio" name="imgStyle" value="watercolor"><span>水彩画風</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>光・時間帯</legend>
+        <select id="mood" name="mood">
+          <option value="evening" selected>温かい夕暮れの光</option>
+          <option value="morning">爽やかな朝の光</option>
+          <option value="afternoon">明るい昼下がり</option>
+          <option value="night">落ち着いた夜の照明</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>構図</legend>
+        <select id="viewpoint" name="viewpoint">
+          <option value="wide" selected>部屋全体を見渡す構図</option>
+          <option value="window">窓際からの視点</option>
+          <option value="family">家族にフォーカスした構図</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>画面比率</legend>
+        <select id="aspect" name="aspect">
+          <option value="1:1">1:1（正方形）</option>
+          <option value="4:3" selected>4:3（標準）</option>
+          <option value="16:9">16:9（横長）</option>
+          <option value="9:16">9:16（縦長）</option>
+        </select>
+      </fieldset>
+
+      <button type="submit" class="go" id="goBtn">プロンプトを作成する</button>
+      <p class="note" id="statusNote">項目を選ぶと下のプロンプトが自動で更新されます。「プロンプトを作成する」でAIが表現を仕上げ、おすすめ商品もあわせて提案します。</p>
+    </form>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div class="label">
+        <span>画像生成AI用プロンプト</span>
+        <button type="button" class="copy-btn" id="copyBtn">コピーする</button>
+      </div>
+      <pre class="prompt-box" id="promptBox"></pre>
+      <p class="tools-note">ChatGPT（DALL·E3/GPT-4o）、Gemini、Midjourney、Stable Diffusion系のツールにそのまま貼り付けてご利用いただけます。Midjourneyをお使いの場合は、末尾の <code>--ar</code> の数値をそのままご利用ください。なお、画像内の文字（商品ラベル）はChatGPTやGeminiの方が正確に表示されやすく、Midjourneyや一部のStable Diffusion系ツールでは文字が崩れることがあります。崩れる場合は、ラベル部分だけ後から画像編集で追加するのがおすすめです。</p>
+    </div>
+
+    <div class="panel">
+      <div class="label"><span>除外したい要素（ネガティブプロンプト）</span></div>
+      <p class="neg-box" id="negBox">文字化けした看板、ゆがんだ手や指、透かし・ロゴ、過度に暗い影</p>
+    </div>
+
+    <div class="panel">
+      <div class="label"><span>画像内に紹介するおすすめデバイス</span></div>
+      <div class="recs" id="recs" aria-live="polite">
+        <p class="placeholder" id="recsPlaceholder">「プロンプトを作成する」を押すと、AIがこの暮らしに合うデバイスを提案し、画像内のラベルにも反映します。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+(function () {
+  const form = document.getElementById('planForm');
+  const goBtn = document.getElementById('goBtn');
+  const statusNote = document.getElementById('statusNote');
+  const promptBox = document.getElementById('promptBox');
+  const negBox = document.getElementById('negBox');
+  const recsEl = document.getElementById('recs');
+  const kidsField = document.getElementById('kidsField');
+  const copyBtn = document.getElementById('copyBtn');
+  const toast = document.getElementById('toast');
+
+  let sample = null;
+  if (typeof claude !== 'undefined' && claude && typeof claude.use === 'function') {
+    claude.use('sample').then((s) => { sample = s; }).catch(() => { sample = null; });
+  }
+
+  function readForm() {
+    const fd = new FormData(form);
+    return {
+      familyType: fd.get('familyType'),
+      kidsCount: parseInt(fd.get('kidsCount') || '0', 10),
+      familyDetail: (fd.get('familyDetail') || '').trim(),
+      hobbies: fd.getAll('hobby'),
+      workStyle: fd.get('workStyle'),
+      housing: fd.get('housing'),
+      years: fd.get('years'),
+      budget: fd.get('budget'),
+      imgStyle: fd.get('imgStyle'),
+      mood: fd.get('mood'),
+      viewpoint: fd.get('viewpoint'),
+      aspect: fd.get('aspect')
+    };
+  }
+
+  const LABELS = {
+    familyType: {single: 'おひとり暮らしの方', couple: '仲の良いご夫婦', couple_kids: 'お子さまのいるご家族', multigen: '三世代が暮らすご家族'},
+    hobby: {
+      photo: '写真撮影', game: 'ゲーム', diy: 'DIY・木工', cook: '料理',
+      garden: '観葉植物やガーデニング', fitness: '自宅でのフィットネス',
+      reading: '読書', music: '音楽・楽器演奏', travel: '旅行の計画',
+      pet: 'ペットとの時間', outdoor: 'アウトドア・キャンプ', movie: '映画・動画鑑賞',
+      craft: '手芸・ハンドメイド'
+    },
+    workStyle: {
+      remote: '在宅ワーク中心の働き方',
+      hybrid: '在宅と出社を組み合わせた働き方',
+      office: '出社中心の働き方',
+      freelance: '自営業・フリーランスとして自分のペースで働くスタイル',
+      shift: 'シフト制で時間帯が変わる働き方',
+      homemaker: '子育てや家事を中心とした日々',
+      senior: '退職後、趣味や地域の集まりを楽しむシニアライフ'
+    },
+    housing: {house: '木の温もりを感じる戸建て', mansion: '洗練されたマンション'},
+    imgStyle: {
+      photo: '実写のような高精細な写真風。自然光と質感を丁寧に再現した写真スタイル',
+      illust: '柔らかい線と優しい色使いのイラスト風。絵本のような温かみのあるタッチ',
+      anime: '日本のアニメ風イラスト。セル画のようなくっきりした線と鮮やかな配色',
+      watercolor: '水彩画風。にじみと余白を活かした、繊細で詩的なタッチ'
+    },
+    mood: {
+      evening: '夕暮れのオレンジ色の光が室内に差し込む、穏やかで温かい時間帯',
+      morning: '朝の柔らかい光が差し込む、清々しく静かな時間帯',
+      afternoon: '明るい昼下がりの自然光に満ちた時間帯',
+      night: '間接照明が灯る、落ち着いた夜の時間帯'
+    },
+    viewpoint: {
+      wide: '部屋全体を見渡す広い構図',
+      window: '窓際から部屋を見渡す視点',
+      family: '家族の様子にフォーカスした構図'
+    }
+  };
+
+  const DESK_WORK_STYLES = ['remote', 'hybrid', 'freelance'];
+
+  function workEnvPhrase(state) {
+    const workPart = LABELS.workStyle[state.workStyle];
+    if (DESK_WORK_STYLES.includes(state.workStyle)) {
+      return `${workPart}のためのデスクやパソコン、モニターも自然に配置され`;
+    }
+    if (state.workStyle === 'senior') {
+      return `${workPart}を楽しみながらゆったりと過ごす時間が感じられ`;
+    }
+    if (state.workStyle === 'homemaker') {
+      return `${workPart}の中で家族との時間を大切にしている様子が感じられ`;
+    }
+    if (state.workStyle === 'shift') {
+      return `${workPart}の合間にくつろぐひとときが感じられ`;
+    }
+    return `${workPart}を終えてくつろぐ、落ち着いた時間が感じられ`;
+  }
+
+  function buildScene(state) {
+    const family = LABELS.familyType[state.familyType] || 'ご家族';
+    const kidsPart = (state.familyType !== 'single' && state.kidsCount > 0)
+      ? `（お子さま${state.kidsCount}人を含む）` : '';
+    const familyDetailPart = state.familyDetail ? `（${state.familyDetail}）` : '';
+    const hobbyList = state.hobbies.map(h => LABELS.hobby[h]).filter(Boolean);
+    const hobbyPart = hobbyList.length ? hobbyList.join('や') : '思い思いの時間';
+    const housingPart = LABELS.housing[state.housing];
+    const stylePart = LABELS.imgStyle[state.imgStyle] || LABELS.imgStyle.photo;
+    const moodPart = LABELS.mood[state.mood] || LABELS.mood.evening;
+    const viewPart = LABELS.viewpoint[state.viewpoint] || LABELS.viewpoint.wide;
+    const budgetPart = state.budget === 'flexible' ? '上質でこだわりを感じるデバイスが自然に置かれている' : '暮らしになじむ、実用的なデバイスが置かれている';
+    const workEnv = workEnvPhrase(state);
+
+    return `${state.years}年後の理想の暮らしを描いてください。${family}${kidsPart}${familyDetailPart}が、${housingPart}のリビングで${hobbyPart}を楽しみながら、${workEnv}、部屋には${budgetPart}様子で、${moodPart}が印象的です。${viewPart}で、${stylePart}で描いてください。人物は生き生きとした自然な表情で、家具や小物のディテールまで丁寧に描き込んでください。画面比率 --ar ${state.aspect}`;
+  }
+
+  function buildDeviceCaptionBlock(products) {
+    if (!products || !products.length) return '';
+    const lines = products.map((p, i) => `${i + 1}. 「${p.name}」─ ${p.feature}`).join('\n');
+    return `\n\nさらに、この画像の中に上記のリビングを紹介するカタログ・インフォグラフィックのように、以下のデバイスを商品紹介ラベル（吹き出しや白背景の小さなカード風の枠に商品名と一言説明を添えたもの）として、実際に置かれている位置の近くに配置してください。文字は簡潔・大きめ・読みやすいフォントではっきりと表示し、誤字や崩れた文字にならないようにしてください。\n${lines}`;
+  }
+
+  function buildFullPrompt(scene, products) {
+    return scene + buildDeviceCaptionBlock(products);
+  }
+
+  function fallbackProducts(state) {
+    const recs = [];
+    if (DESK_WORK_STYLES.includes(state.workStyle)) {
+      recs.push({name: '27型 4Kモニター', feature: '大画面で資料や映像をくっきり表示', reason: '在宅や自営業での作業を快適にするモニターです。'});
+    }
+    if (state.workStyle === 'senior') {
+      recs.push({name: '12型 かんたん操作タブレット', feature: '文字が大きく操作もシンプル', reason: '毎日の暮らしを無理なくサポートします。'});
+    }
+    if (state.workStyle === 'homemaker') {
+      recs.push({name: '家族共有スマートディスプレイ', feature: '予定やメモを家族みんなで共有', reason: '家事や子育ての段取りがしやすくなります。'});
+    }
+    if (state.hobbies.includes('photo')) {
+      recs.push({name: 'コンパクトフォトプリンター', feature: '撮った写真をその場でプリント', reason: '趣味の写真をすぐ形に残せます。'});
+    }
+    if (state.hobbies.includes('game')) {
+      recs.push({name: '144Hzゲーミングモニター', feature: 'なめらかな映像でゲームを快適に', reason: 'ゲーム体験がより快適になります。'});
+    }
+    if (state.hobbies.includes('cook')) {
+      recs.push({name: 'キッチン用タブレットスタンド', feature: 'レシピ動画を見ながら調理', reason: '料理の時間がもっと楽しくなります。'});
+    }
+    if (state.hobbies.includes('reading')) {
+      recs.push({name: '電子書籍リーダー', feature: '目に優しい画面で読書に集中', reason: '読書の時間をより快適にします。'});
+    }
+    if (state.hobbies.includes('music')) {
+      recs.push({name: 'ワイヤレススピーカー', feature: '部屋全体に広がる豊かな音', reason: '好きな音楽を高音質で楽しめます。'});
+    }
+    if (state.hobbies.includes('travel')) {
+      recs.push({name: 'モバイルWi-Fiルーター', feature: '外出先でも快適にネット接続', reason: '旅行をより自由に楽しめます。'});
+    }
+    if (state.hobbies.includes('pet')) {
+      recs.push({name: 'ペット見守りカメラ', feature: '外出中もスマホで様子を確認', reason: '大切なペットも安心です。'});
+    }
+    if (state.hobbies.includes('outdoor')) {
+      recs.push({name: 'タフネスモバイルバッテリー', feature: '衝撃や水にも強い耐久設計', reason: 'アウトドアでも安心して使えます。'});
+    }
+    if (state.hobbies.includes('movie')) {
+      recs.push({name: '大画面スマートテレビ', feature: '迫力の映像でおうち時間を充実', reason: '映画や動画をより楽しめます。'});
+    }
+    if (recs.length < 3) {
+      recs.push({name: 'メッシュWi-Fiルーター', feature: '家中どこでも安定した通信', reason: 'ご家族みんなが同時に使っても安心です。'});
+    }
+    return recs.slice(0, 4);
+  }
+
+  function renderRecs(list) {
+    recsEl.innerHTML = list.map(r => `
+      <div class="rec">
+        <h3>${escapeHtml(r.name)}</h3>
+        <p>${escapeHtml(r.reason || r.feature)}</p>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function setPrompt(text) {
+    promptBox.classList.remove('ready');
+    // force reflow so the fade-in transition replays on update
+    void promptBox.offsetWidth;
+    promptBox.textContent = text;
+    requestAnimationFrame(() => promptBox.classList.add('ready'));
+  }
+
+  function livePreview() {
+    const state = readForm();
+    kidsField.style.display = state.familyType === 'single' ? 'none' : '';
+    const products = fallbackProducts(state);
+    setPrompt(buildFullPrompt(buildScene(state), products));
+  }
+
+  async function generate(state) {
+    goBtn.disabled = true;
+    goBtn.textContent = '仕上げています…';
+    const scene = buildScene(state);
+    const fallbackProds = fallbackProducts(state);
+    setPrompt(buildFullPrompt(scene, fallbackProds));
+    recsEl.innerHTML = '<p class="placeholder">おすすめ商品を考えています…</p>';
+
+    if (!sample) {
+      renderRecs(fallbackProds);
+      statusNote.textContent = 'この環境ではAIによる仕上げ・提案が利用できないため、選択内容から直接作成したプロンプトを表示しています。';
+      goBtn.disabled = false;
+      goBtn.textContent = 'プロンプトを作成する';
+      return;
+    }
+
+    const prompt = `あなたは家電量販店PCデポの「デジタルライフプランナー」です。以下の下書きの情景描写を、画像生成AI（MidjourneyやDALL·E、Gemini等）にそのまま貼り付けて高品質な1枚が生成できるよう、より具体的で描写豊かな日本語の情景描写に書き直してください。末尾の「--ar ○:○」はそのまま残してください（商品ラベルの指示はこちらで別途追加するので、情景描写だけを書き直してください）。
+
+下書きの情景描写:
+${scene}
+
+あわせて、この暮らしに役立つPCデポのデバイスを3〜4個、それぞれ「商品名（実在の型番・ブランド名は避けた一般的な呼び名）」「画像内のラベルに使う一言の特長説明（15〜25字程度）」「この家族にすすめる理由（30〜40字程度）」をセットで提案してください。
+
+次のJSON形式のみで出力してください。前置きや説明、コードブロックの記号は一切含めないでください。
+{
+  "scene": "書き直した情景描写全文（--ar を含む、商品ラベルの指示文は含めない）",
+  "negative_prompt": "画像に含めたくない要素を20〜40字程度で（例: 文字化けした看板、ゆがんだ手、透かしなど）",
+  "products": [
+    {"name": "商品名", "feature": "画像ラベル用の一言特長", "reason": "この家族にすすめる理由"}
+  ]
+}`;
+
+    try {
+      const result = await sample.json(prompt, { modelTier: 'default' });
+      const finalScene = (result && result.scene) ? result.scene : scene;
+      const negText = (result && result.negative_prompt) ? result.negative_prompt : negBox.textContent;
+      const products = (result && Array.isArray(result.products) && result.products.length)
+        ? result.products : fallbackProds;
+      setPrompt(buildFullPrompt(finalScene, products));
+      negBox.textContent = negText;
+      renderRecs(products);
+      statusNote.textContent = 'AIがプロンプトを仕上げました。項目を変えると下書きプロンプトに戻りますので、その場合は再度作成してください。';
+    } catch (err) {
+      renderRecs(fallbackProds);
+      statusNote.textContent = 'AIからの応答を取得できなかったため、選択内容から直接作成したプロンプトを表示しています。';
+    } finally {
+      goBtn.disabled = false;
+      goBtn.textContent = 'プロンプトを作成する';
+    }
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    const text = promptBox.textContent || '';
+    if (!text) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1600);
+    } catch (err) {
+      statusNote.textContent = 'コピーに失敗しました。プロンプトを選択して手動でコピーしてください。';
+    }
+  });
+
+  form.addEventListener('input', livePreview);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    generate(readForm());
+  });
+
+  livePreview();
+})();
+</script>
+</body>
+</html>
